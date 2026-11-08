@@ -112,28 +112,62 @@ class AniTrackApp {
             });
         }
 
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const installBtn = document.getElementById('pwa-install-btn');
+
+        if (isStandalone) {
+            if (installBtn) installBtn.classList.add('hidden');
+            return;
+        }
+
+        // Detect iOS / iPadOS (iPadOS reports as MacIntel with touch points)
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isIOS = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // Always show install button on tablets/iOS devices where beforeinstallprompt doesn't fire natively
+        if (isIOS && installBtn) {
+            installBtn.classList.remove('hidden');
+        }
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
-            const installBtn = document.getElementById('pwa-install-btn');
             if (installBtn) installBtn.classList.remove('hidden');
         });
 
         window.addEventListener('appinstalled', () => {
             this.deferredPrompt = null;
-            const installBtn = document.getElementById('pwa-install-btn');
             if (installBtn) installBtn.classList.add('hidden');
             this.showToast('AniTrack installed successfully!', 'success');
         });
     }
 
     installPWA() {
-        if (!this.deferredPrompt) return;
-        this.deferredPrompt.prompt();
-        this.deferredPrompt.userChoice.then(() => {
-            this.deferredPrompt = null;
-            document.getElementById('pwa-install-btn')?.classList.add('hidden');
-        });
+        if (this.deferredPrompt) {
+            this.deferredPrompt.prompt();
+            this.deferredPrompt.userChoice.then(() => {
+                this.deferredPrompt = null;
+                document.getElementById('pwa-install-btn')?.classList.add('hidden');
+            });
+            return;
+        }
+
+        // Tablet / iOS guide fallback
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isIOS = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        const iosGuide = document.getElementById('pwa-install-guide-ios');
+        const genGuide = document.getElementById('pwa-install-guide-generic');
+
+        if (isIOS) {
+            if (iosGuide) iosGuide.classList.remove('hidden');
+            if (genGuide) genGuide.classList.add('hidden');
+        } else {
+            if (iosGuide) iosGuide.classList.add('hidden');
+            if (genGuide) genGuide.classList.remove('hidden');
+        }
+
+        this.openModal('pwa-install-modal');
     }
 
     setApiSource(source) {
