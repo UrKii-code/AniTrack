@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover">
+    <title>AniTrack — Anime & Manga Tracker</title>
+    <meta name="description" content="Cyberpunk Anime & Manga Tracker and Watch Order platform with catalogue search, platform integrations, and local backup." />
+    <meta property="og:title" content="AniTrack — Anime & Manga Tracker" />
+    <meta property="og:description" content="Cyberpunk Anime & Manga Tracker and Watch Order platform with catalogue search, platform integrations, and local backup." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- PWA Meta & Links -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#030712">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            900: '#312e81',
+                        },
+                        cyber: {
+                            pink: '#ff2a85',
+                            cyan: '#00f0ff',
+                            purple: '#ab00ff',
+                            dark: '#030712',
+                            anilist: '#3db4f2'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Modular Website Styling -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-full flex flex-col antialiased selection:bg-brand-500 selection:text-white pt-safe">
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed top-3 left-3 right-3 sm:left-auto sm:right-5 sm:top-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none"></div>
+
+    <!-- Offline Status Indicator Banner -->
+    <div id="offline-banner" class="hidden bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-xs py-2 px-4 text-center font-semibold flex items-center justify-center gap-2">
+        <i class="fa-solid fa-wifi"></i>
+        <span>You are currently offline. Local tracking enabled; catalogue search requires internet.</span>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <header class="sticky top-0 z-40 glass-card border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="app.resetFilters()" role="button" aria-label="Reset filters and return to top">
+                    <img src="icon-192.png" alt="AniTrack Logo" class="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/20 border border-brand-500/30 object-cover" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%236366f1\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'white\' font-family=\'sans-serif\' font-size=\'20\' font-weight=\'bold\'%3EA%3C/text%3E%3C/svg%3E';">
+                    <div>
+                        <span class="text-2xl font-black tracking-wider text-gradient">AniTrack</span>
+                        <span class="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20 ml-2">v4.0</span>
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center space-x-1 sm:space-x-3">
+                    <button id="pwa-install-btn" onclick="app.installPWA()" class="hidden bg-slate-900 hover:bg-slate-800 text-cyber-cyan border border-cyber-cyan/40 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/10 active:scale-95">
+                        <i class="fa-solid fa-download"></i>
+                        <span class="hidden sm:inline">Install</span>
+                    </button>
+
+                    <button onclick="app.openModal('entry-modal')" aria-label="Add new entry" class="bg-gradient-to-r from-brand-600 to-cyber-purple hover:from-brand-500 hover:to-cyber-pink active:scale-95 text-white font-semibold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-lg shadow-brand-600/30 transition-all flex items-center gap-1 sm:gap-2">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span class="hidden xs:inline sm:inline">Add Entry</span>
+                    </button>
+                    
+                    <button onclick="app.openModal('platforms-modal')" aria-label="Open custom links manager" class="bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 hover:text-white border border-slate-800 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-1.5" title="Custom Link Manager">
+                        <i class="fa-solid fa-link text-cyber-cyan"></i>
+                        <span class="hidden md:inline">Links</span>
+                    </button>
+
+                    <button onclick="app.openModal('data-modal')" aria-label="Open data backup and import manager" class="bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 hover:text-white border border-slate-800 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-1.5" title="Data & Backups">
+                        <i class="fa-solid fa-database text-brand-400"></i>
+                        <span class="hidden md:inline">Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-2.5 sm:px-6 lg:px-8 py-3 sm:py-6 space-y-3 sm:space-y-6 pb-28 sm:pb-8">
+        
+        <!-- Dashboard Header Stats -->
+        <div class="grid grid-cols-3 gap-1.5 sm:gap-4">
+            <div class="glass-card rounded-xl sm:rounded-2xl p-2 sm:p-4 flex items-center justify-between border-l-4 border-l-brand-500 min-w-0">
+                <div class="min-w-0 flex-1 mr-1">
+                    <p class="text-[9px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 truncate">Total Entries</p>
+                    <h3 id="stat-total" class="text-base sm:text-3xl font-extrabold text-white mt-0.5 sm:mt-1">0</h3>
+                    <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 truncate"><span id="stat-anime-cnt">0</span> Anime • <span id="stat-manga-cnt">0</span> Manga</p>
+                </div>
+                <div class="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center text-xs sm:text-xl border border-brand-500/20 shrink-0">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl sm:rounded-2xl p-2 sm:p-4 flex items-center justify-between border-l-4 border-l-cyber-cyan min-w-0">
+                <div class="min-w-0 flex-1 mr-1">
+                    <p class="text-[9px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 truncate">Active Progress</p>
+                    <h3 id="stat-active" class="text-base sm:text-3xl font-extrabold text-cyber-cyan mt-0.5 sm:mt-1">0</h3>
+                    <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 truncate">Watching/Reading</p>
+                </div>
+                <div class="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-cyan-500/10 text-cyber-cyan flex items-center justify-center text-xs sm:text-xl border border-cyan-500/20 shrink-0">
+                    <i class="fa-solid fa-circle-play"></i>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl sm:rounded-2xl p-2 sm:p-4 flex items-center justify-between border-l-4 border-l-emerald-500 min-w-0">
+                <div class="min-w-0 flex-1 mr-1">
+                    <p class="text-[9px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 truncate">Completed</p>
+                    <h3 id="stat-completed" class="text-base sm:text-3xl font-extrabold text-emerald-400 mt-0.5 sm:mt-1">0</h3>
+                    <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 truncate">Finished Series</p>
+                </div>
+                <div class="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs sm:text-xl border border-emerald-500/20 shrink-0">
+                    <i class="fa-solid fa-check-double"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Tab Bar (Anime, Manga, Watch Order) -->
+        <div class="glass-card rounded-2xl p-2.5 sm:p-4 space-y-3 sm:space-y-4">
+            <div class="flex flex-col lg:flex-row flex-wrap xl:flex-nowrap gap-2.5 sm:gap-3 items-stretch lg:items-center justify-between">
+                <!-- Main Category Switcher (Anime / Manga / Watch Order) -->
+                <div class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 w-full lg:w-auto overflow-x-auto no-scrollbar scrollbar-none">
+                    <button id="cat-tab-anime" onclick="app.setCategory('anime')" class="flex-1 min-w-0 lg:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap shrink-0 sm:shrink">
+                        <i class="fa-solid fa-tv text-[11px] sm:text-xs"></i>
+                        <span>Anime</span>
+                        <span id="badge-anime-count" class="px-1.5 py-0.5 text-[10px] sm:text-xs rounded-md bg-slate-800 text-slate-300">0</span>
+                    </button>
+                    <button id="cat-tab-manga" onclick="app.setCategory('manga')" class="flex-1 min-w-0 lg:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap shrink-0 sm:shrink">
+                        <i class="fa-solid fa-book-open text-[11px] sm:text-xs"></i>
+                        <span>Manga</span>
+                        <span id="badge-manga-count" class="px-1.5 py-0.5 text-[10px] sm:text-xs rounded-md bg-slate-800 text-slate-300">0</span>
+                    </button>
+                    <button id="cat-tab-franchise" onclick="app.setCategory('franchise')" class="flex-1 min-w-0 lg:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-400 hover:text-white whitespace-nowrap shrink-0 sm:shrink">
+                        <i class="fa-solid fa-compass text-[11px] sm:text-xs"></i>
+                        <span>Watch Order</span>
+                        <span id="badge-franchise-count" class="px-1.5 py-0.5 text-[10px] sm:text-xs rounded-md bg-slate-800 text-slate-300">0</span>
+                    </button>
+                </div>
+
+                <!-- Sub-filters / Title Display (Visible on Anime/Manga tabs) -->
+                <div id="standard-filters-container" class="flex flex-wrap items-center justify-between sm:justify-start gap-2 w-full lg:w-auto">
+                    <div class="flex items-center bg-slate-900/50 p-1 rounded-xl border border-slate-800/60 flex-1 sm:flex-initial justify-between sm:justify-start">
+                        <button id="status-tab-all" onclick="app.setStatus('all')" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 text-slate-400 hover:text-white text-center">All</button>
+                        <button id="status-tab-active" onclick="app.setStatus('active')" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 text-slate-400 hover:text-white text-center">
+                            <span id="status-tab-active-label">Watching</span>
+                        </button>
+                        <button id="status-tab-completed" onclick="app.setStatus('completed')" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 text-slate-400 hover:text-white text-center">Completed</button>
+                    </div>
+
+                    <!-- Title Display Mode Toggle -->
+                    <div class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
+                        <button id="title-mode-english" onclick="app.setTitleDisplayMode('english')" class="px-2.5 py-1 rounded-lg font-medium text-slate-400 hover:text-white transition-colors" title="Display English Title First">ENG</button>
+                        <button id="title-mode-romanji" onclick="app.setTitleDisplayMode('romanji')" class="px-2.5 py-1 rounded-lg font-medium text-slate-400 hover:text-white transition-colors" title="Display Romanji Title First">ROM</button>
+                    </div>
+                </div>
+
+                <!-- Franchise Action Bar (Visible when Watch Order Tab is Active) -->
+                <div id="franchise-action-container" class="hidden flex items-center justify-between sm:justify-end gap-2 w-full lg:w-auto">
+                    <button onclick="app.toggleShowHiddenFranchises()" id="toggle-hidden-franchises-btn" class="flex-1 sm:flex-initial bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                        <i class="fa-solid fa-eye-slash text-brand-400"></i>
+                        <span id="toggle-hidden-text">Show Hidden</span>
+                    </button>
+                    <button onclick="app.openModal('franchise-wizard-modal')" class="flex-1 sm:flex-initial bg-gradient-to-r from-cyber-cyan to-brand-500 hover:brightness-110 text-slate-950 font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Create Franchise</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Watch Order Main Search Bar (Visible only on Watch Order tab when not viewing single franchise detail) -->
+            <div id="watch-order-search-wrapper" class="hidden pt-2 border-t border-slate-800/80 space-y-2">
+                <div class="relative w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs sm:text-sm"></i>
+                    <input type="text" id="watch-order-search-input" oninput="app.handleWatchOrderSearch()" placeholder="Search Watch Order (franchises, titles, Romaji)..." class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan text-xs sm:text-sm text-slate-200 placeholder-slate-500 rounded-xl pl-9 sm:pl-10 pr-9 py-2 sm:py-2.5 outline-none transition-all">
+                    <button onclick="app.clearWatchOrderSearch()" id="watch-order-search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" id="include-hidden-franchises-checkbox" onchange="app.renderGrid()" class="rounded bg-slate-900 border-slate-700 text-cyber-cyan focus:ring-cyber-cyan cursor-pointer">
+                        <span>Include Hidden Franchises</span>
+                    </label>
+                </div>
+            </div>
+
+            <hr id="control-divider" class="border-slate-800/60">
+
+            <!-- Search & Sort Controls (Hidden on Franchise List, Active on Anime/Manga) -->
+            <div id="search-sort-container" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3">
+                <div class="relative sm:col-span-7">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs sm:text-sm"></i>
+                    <input type="text" id="search-input" oninput="app.handleSearch()" placeholder="Search English, Romaji, Japanese, or alternative titles..." class="w-full bg-slate-900/80 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-xs sm:text-sm text-slate-200 placeholder-slate-500 rounded-xl pl-9 sm:pl-10 pr-4 py-2.5 outline-none transition-all">
+                </div>
+
+                <div class="sm:col-span-5 flex items-center gap-2">
+                    <div class="relative w-full">
+                        <i class="fa-solid fa-arrow-down-wide-short absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs sm:text-sm"></i>
+                        <select id="sort-select" onchange="app.handleSort()" class="w-full bg-slate-900/80 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-xs sm:text-sm text-slate-200 rounded-xl pl-9 sm:pl-10 pr-8 py-2.5 outline-none transition-all appearance-none cursor-pointer">
+                            <option value="updated">Recently Updated</option>
+                            <option value="title">Title (A - Z)</option>
+                            <option value="externalRating">Highest Internet Rating</option>
+                            <option value="progress">Completion %</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+                    </div>
+
+                    <button onclick="app.resetFilters()" class="p-2.5 text-slate-400 hover:text-white active:scale-95 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all flex-shrink-0" title="Reset Filters" aria-label="Reset Search Filters">
+                        <i class="fa-solid fa-rotate-left text-xs sm:text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Media Grid (Anime / Manga / Franchise List) -->
+        <div id="media-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5"></div>
+
+        <!-- Franchise Detail View Container (Embedded in Watch Order Tab when viewing a franchise) -->
+        <div id="franchise-detail-container" class="hidden space-y-6"></div>
+
+        <!-- Load More Container -->
+        <div id="load-more-container" class="hidden flex justify-center pt-4">
+            <button onclick="app.loadMoreEntries()" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs sm:text-sm px-6 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2">
+                <i class="fa-solid fa-angle-down"></i> Load More Entries
+            </button>
+        </div>
+
+        <!-- Floating Mobile Quick Add Button -->
+        <button onclick="app.openModal('entry-modal')" aria-label="Add entry float button" class="sm:hidden fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-r from-brand-600 to-cyber-purple text-white shadow-xl shadow-brand-600/40 active:scale-90 transition-transform flex items-center justify-center text-xl border border-white/20">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex-col items-center justify-center py-16 px-4 text-center glass-card rounded-2xl border border-dashed border-slate-800">
+            <div class="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 mb-4 text-2xl">
+                <i class="fa-solid fa-ghost"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-200 mb-1" id="empty-title">No Entries Found</h3>
+            <p class="text-sm text-slate-400 max-w-md mb-6" id="empty-desc">There are no items matching your filter or search query.</p>
+            <button id="empty-action-btn" onclick="app.openModal('entry-modal')" class="bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm px-5 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i>
+                Add Entry Now
+            </button>
+        </div>
+    </main>
+
+    <!-- Modal 1: Add/Edit Entry Modal with Smart Duplicate Prevention Interception -->
+    <div id="entry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/95 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="entry-modal-content">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 id="modal-title" class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-brand-400"></i>
+                    <span>Add New Media</span>
+                </h3>
+                <button onclick="app.closeModal('entry-modal')" aria-label="Close modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="entry-form" onsubmit="app.saveEntry(event)" class="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto modal-scroll-mobile">
+                <input type="hidden" id="entry-id">
+                <input type="hidden" id="form-kitsu-id">
+                <input type="hidden" id="form-anilist-id">
+                <input type="hidden" id="form-rating-source">
+                <input type="hidden" id="form-rating-updated-at">
+
+                <!-- Catalogue Search Bar with API Source Selector (Kitsu & AniList) -->
+                <div class="space-y-2.5 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label class="block text-xs font-semibold text-brand-300 uppercase tracking-wider">Catalogue Search & Source</label>
+                        <div class="flex items-center bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+                            <button type="button" id="api-source-kitsu" onclick="app.setApiSource('kitsu')" class="px-3 py-1 rounded-md font-semibold transition-colors">Kitsu</button>
+                            <button type="button" id="api-source-anilist" onclick="app.setApiSource('anilist')" class="px-3 py-1 rounded-md font-semibold transition-colors">AniList</button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input type="search" id="catalog-search-input" placeholder="Search titles, e.g. Cowboy Bebop" class="min-w-0 flex-1 bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none" onkeydown="if(event.key==='Enter'){event.preventDefault();app.searchCatalog();}">
+                        <button type="button" id="catalog-search-button" onclick="app.searchCatalog()" class="shrink-0 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"><i class="fa-solid fa-magnifying-glass mr-1"></i> Search</button>
+                    </div>
+                    <div id="catalog-search-status" class="hidden text-xs text-slate-400" role="status" aria-live="polite"></div>
+                    <div id="catalog-search-results" class="hidden space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+                    
+                    <!-- Duplicate Detection Banner Interception -->
+                    <div id="duplicate-warning" class="hidden p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs text-amber-200 space-y-2">
+                        <div class="flex items-center gap-2 font-bold">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span id="duplicate-warning-title">Already in your collection</span>
+                        </div>
+                        <p id="duplicate-warning-desc" class="text-[11px] text-amber-300/90">This title or matching catalogue ID already exists in your library.</p>
+                        <div id="duplicate-action-buttons" class="flex flex-wrap gap-2 pt-1">
+                            <button type="button" id="dup-use-existing-btn" onclick="app.useExistingDuplicateEntry()" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold transition-all text-xs">Use Existing Entry</button>
+                            <button type="button" onclick="document.getElementById('duplicate-warning').classList.add('hidden')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 transition-all text-xs">Create Separate Entry</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dual Title Fields & Alternatives -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">English Title</label>
+                        <input type="text" id="form-title-english" placeholder="e.g. Cowboy Bebop" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Romaji Title</label>
+                        <input type="text" id="form-title-romanji" placeholder="e.g. Cowboy Bebop" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Preferred Display Title</label>
+                    <select id="form-preferred-title" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none cursor-pointer">
+                        <option value="english">English</option>
+                        <option value="romanji">Romaji</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Alternative Titles (comma separated)</label>
+                    <input type="text" id="form-title-alternatives" placeholder="e.g. CB, Cowboy Bebop TV" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1.5">Category *</label>
+                        <select id="form-category" onchange="app.toggleCategoryFormLabels()" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none cursor-pointer">
+                            <option value="anime">Anime</option>
+                            <option value="manga">Manga</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1.5">Status *</label>
+                        <select id="form-status" onchange="app.handleFormStatusChange()" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none cursor-pointer">
+                            <option value="active" id="opt-status-active">Watching</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                    <div>
+                        <label id="lbl-progress-current" class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1.5">Watched Episodes</label>
+                        <input type="number" id="form-current-progress" min="0" value="0" class="w-full bg-slate-900 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                    </div>
+                    <div>
+                        <label id="lbl-progress-total" class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1.5">Total Episodes (0 = ∞)</label>
+                        <input type="number" id="form-total-progress" min="0" value="0" placeholder="0 for ongoing" onchange="app.handleFormTotalChange()" class="w-full bg-slate-900 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1.5">Season / Arc / Subtype</label>
+                    <input type="text" id="form-season" placeholder="e.g. Season 2, TV" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                </div>
+
+                <!-- Internet rating is supplied by the selected external catalogue only. -->
+                <div class="space-y-1.5 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                    <label class="block text-xs font-medium text-amber-400 uppercase tracking-wider">
+                        <i class="fa-solid fa-star mr-1"></i> Internet Rating (0.0 - 10.0)
+                    </label>
+                    <input type="number" id="form-external-rating" min="0" max="10" step="0.1" placeholder="Choose a Kitsu or AniList catalogue result" readonly aria-readonly="true" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none opacity-80 cursor-not-allowed">
+                    <p class="text-[10px] text-slate-400">Provided by Kitsu or AniList. Personal MAL scores and manual ratings are not used.</p>
+                </div>
+
+                <!-- Cover Image URL & Live Preview -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider">Cover Image URL</label>
+                    <div class="flex gap-3 items-center">
+                        <input type="url" id="form-cover-url" placeholder="https://domain.com/poster.jpg" oninput="app.updatePosterPreview()" class="min-w-0 flex-1 bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none">
+                        <img id="poster-preview" src="" alt="Preview" class="w-10 h-14 object-cover rounded-lg bg-slate-950 border border-slate-800 shrink-0 hidden">
+                    </div>
+                </div>
+
+                <!-- Custom Link Override Field -->
+                <div class="space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
+                    <label class="block text-xs font-medium text-brand-300 uppercase tracking-wider">Title-Specific External Link (Optional)</label>
+                    <input type="url" id="form-external-url" placeholder="https://crunchyroll.com/series/custom-id" class="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="app.closeModal('entry-modal')" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-800 transition-colors">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-cyber-purple hover:from-brand-500 hover:to-cyber-pink shadow-lg shadow-brand-600/30 transition-all">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Custom Link Manager Settings Modal -->
+    <div id="platforms-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/95 border border-slate-800 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="platforms-modal-content">
+            
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan">
+                        <i class="fa-solid fa-link text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Custom Link Manager</h3>
+                        <p class="text-xs text-slate-400">Settings &gt; Platforms & External Destinations</p>
+                    </div>
+                </div>
+                <button onclick="app.closeModal('platforms-modal')" aria-label="Close custom platforms modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto modal-scroll-mobile">
+                <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                    <div class="relative flex-grow max-w-md">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="text" id="platform-search" oninput="app.renderPlatformsList()" placeholder="Filter platforms..." class="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl pl-9 pr-3 py-2 outline-none focus:border-cyber-cyan">
+                    </div>
+                    <button onclick="app.openPlatformFormModal()" class="bg-gradient-to-r from-cyber-cyan to-brand-500 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Add New Platform</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950/80 p-4 rounded-xl border border-slate-800/80">
+                    <div>
+                        <label class="block text-xs font-semibold text-brand-300 uppercase tracking-wider mb-1.5">
+                            <i class="fa-solid fa-tv mr-1"></i> Default Anime Platform
+                        </label>
+                        <select id="default-anime-platform" onchange="app.saveDefaultPlatforms()" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none cursor-pointer">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-cyber-pink uppercase tracking-wider mb-1.5">
+                            <i class="fa-solid fa-book-open mr-1"></i> Default Manga Platform
+                        </label>
+                        <select id="default-manga-platform" onchange="app.saveDefaultPlatforms()" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none cursor-pointer">
+                        </select>
+                    </div>
+                </div>
+
+                <div id="platforms-list-container" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Add / Edit Platform Form Modal -->
+    <div id="platform-form-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/95 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="platform-form-modal-content">
+            
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 id="platform-form-title" class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-link text-cyber-cyan"></i>
+                    <span>Add Custom Platform</span>
+                </h3>
+                <button onclick="app.closeModal('platform-form-modal')" aria-label="Close platform form modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="platform-form" onsubmit="app.savePlatform(event)" class="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto modal-scroll-mobile">
+                <input type="hidden" id="pf-id">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Platform Name *</label>
+                    <input type="text" id="pf-name" required placeholder="e.g. Crunchyroll, MangaPlus" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Base URL * (HTTP/HTTPS)</label>
+                    <input type="text" id="pf-url" required placeholder="https://www.crunchyroll.com" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+                    <span id="pf-url-error" class="hidden text-[11px] text-rose-400 mt-1">Please enter a valid URL starting with http:// or https://</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Supported Category *</label>
+                        <select id="pf-category" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-xs text-slate-100 outline-none cursor-pointer">
+                            <option value="both">Both (Anime & Manga)</option>
+                            <option value="anime">Anime Only</option>
+                            <option value="manga">Manga Only</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">FontAwesome Icon Class</label>
+                        <input type="text" id="pf-icon" placeholder="fa-tv, fa-play, fa-book" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Custom Image Icon URL (Optional)</label>
+                    <input type="url" id="pf-icon-url" placeholder="https://domain.com/icon.png" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Description (Optional)</label>
+                    <input type="text" id="pf-description" placeholder="Official streaming service" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="pf-enabled" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyber-cyan"></div>
+                    </label>
+                    <span class="text-xs font-medium text-slate-300">Enable Platform</span>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="app.closeModal('platform-form-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-950 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Save Platform</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 4: Generic Confirmation Dialog Modal -->
+    <div id="confirm-modal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-4 text-center transform scale-95 transition-transform duration-200" id="confirm-modal-content">
+            <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <h3 id="confirm-title" class="text-base font-bold text-white">Confirm Action</h3>
+                <p id="confirm-message" class="text-xs text-slate-400 mt-1.5">Are you sure you want to proceed?</p>
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+                <button id="confirm-cancel-btn" class="w-1/2 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-950 border border-slate-800">Cancel</button>
+                <button id="confirm-action-btn" class="w-1/2 py-2 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/30">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Data & Backup Import/Export Modal with Watch Order Dedicated Backups -->
+    <div id="data-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/95 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="data-modal-content">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-database text-cyber-cyan"></i>
+                    <span>Data & Import/Export</span>
+                </h3>
+                <button onclick="app.closeModal('data-modal')" aria-label="Close data modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto modal-scroll-mobile">
+                <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl text-[11px] text-brand-300 leading-relaxed">
+                    <i class="fa-solid fa-circle-info mr-1"></i>
+                    <strong>Note:</strong> Data is saved in browser local storage. Recommended Full Backup (v2) includes collections, watch orders, franchises, and settings.
+                </div>
+
+                <!-- MyAnimeList Import Section with Duplicate Strategy -->
+                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex items-center gap-2 text-sm font-semibold text-brand-400">
+                        <i class="fa-solid fa-file-code"></i>
+                        <span>Import MyAnimeList (MAL) XML</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Upload your exported MyAnimeList XML file. Maps IDs, titles, types, dates, statuses, progress, and internet scores.</p>
+                    
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Duplicate Strategy</label>
+                        <select id="mal-duplicate-strategy" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none cursor-pointer">
+                            <option value="skip">Skip duplicates (Keep existing)</option>
+                            <option value="update">Update existing entries with XML data</option>
+                            <option value="import">Import as new entries</option>
+                        </select>
+                    </div>
+
+                    <label class="block pt-1">
+                        <span class="sr-only">Choose MAL XML File</span>
+                        <input type="file" id="mal-file-input" accept=".xml" onchange="app.importMAL(event)" class="block w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-500/20 file:text-brand-300 hover:file:bg-brand-500/30 cursor-pointer">
+                    </label>
+                </div>
+
+                <!-- Dedicated Watch Order Backup & Restore Section -->
+                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm font-semibold text-amber-400">
+                            <i class="fa-solid fa-compass"></i>
+                            <span>Watch Order Dedicated Backup</span>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">Franchises Only</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Export or restore franchise watch orders independently without full library overhead.</p>
+                    
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Watch Order Import Mode</label>
+                        <select id="watch-order-import-mode" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none cursor-pointer">
+                            <option value="merge">Merge with existing watch orders</option>
+                            <option value="replace">Replace existing watch orders</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <button onclick="app.exportWatchOrderJSON()" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-download"></i> Export Watch Order
+                        </button>
+                        
+                        <label class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
+                            <i class="fa-solid fa-upload"></i> Restore Watch Order
+                            <input type="file" id="watch-order-file-input" accept=".json" onchange="app.importWatchOrderJSON(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Full JSON Backup & Restore with Scope Filters -->
+                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm font-semibold text-cyber-cyan">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                            <span>Full AniTrack Backup (v2)</span>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">Recommended</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Export complete collections, watch orders, franchises, and custom link settings in a single file.</p>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Category Scope</label>
+                            <select id="export-category-filter" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
+                                <option value="all">Anime & Manga</option>
+                                <option value="anime">Anime Only</option>
+                                <option value="manga">Manga Only</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Status Scope</label>
+                            <select id="export-status-filter" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
+                                <option value="all">Complete / All</option>
+                                <option value="active">Watching / Reading Only</option>
+                                <option value="completed">Completed Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <button onclick="app.exportJSON()" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-download"></i> Export Full Backup
+                        </button>
+                        
+                        <label class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
+                            <i class="fa-solid fa-upload"></i> Restore Full Backup
+                            <input type="file" id="json-file-input" accept=".json" onchange="app.importJSON(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-rose-950/20 p-4 rounded-xl border border-rose-900/40 space-y-2">
+                    <div class="flex items-center gap-2 text-sm font-semibold text-rose-400">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>Reset Data</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Permanently delete all tracked entries, franchises, and custom platform links from local storage.</p>
+                    <button onclick="app.confirmReset()" class="w-full bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-600/40 py-2 rounded-xl text-xs font-semibold transition-all">
+                        Clear Storage Library
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: Franchise Wizard & Creation Modal -->
+    <div id="franchise-wizard-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="franchise-wizard-modal-content">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-compass text-cyber-cyan"></i>
+                    <span>Create Franchise Watch Order</span>
+                </h3>
+                <button onclick="app.closeModal('franchise-wizard-modal')" aria-label="Close franchise wizard" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-5 max-h-[82vh] overflow-y-auto modal-scroll-mobile">
+                <!-- Step 1: Search Franchise Query -->
+                <div class="space-y-3 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                    <label class="block text-xs font-semibold text-brand-300 uppercase tracking-wider">1. Search Franchise Main Title</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="franchise-query-input" placeholder="e.g. Attack on Titan, Naruto, Steins;Gate" class="flex-1 bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none" onkeydown="if(event.key==='Enter'){event.preventDefault();app.searchFranchiseWizard();}">
+                        <button type="button" id="franchise-search-btn" onclick="app.searchFranchiseWizard()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 transition-all shadow-md">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> Find Anime
+                        </button>
+                    </div>
+                    <div id="wizard-search-status" class="hidden text-xs text-slate-400"></div>
+                    <div id="wizard-search-results" class="hidden space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Step 2: Selected Main Title & Discovered Entries Preview -->
+                <div id="wizard-review-section" class="hidden space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider"><i class="fa-solid fa-list-check mr-1"></i> 2. Review Discovered Franchise Entries</h4>
+                        <span id="wizard-entry-count-badge" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 text-[10px] font-semibold border border-emerald-500/20">0 items</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Franchise Name</label>
+                        <input type="text" id="wizard-franchise-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Franchise-Level Adaptation Status</label>
+                        <select id="wizard-adaptation-status" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 outline-none cursor-pointer">
+                            <option value="complete_adaptation">Manga adaptation complete</option>
+                            <option value="manga_ongoing">Source manga still ongoing</option>
+                            <option value="incomplete_adaptation">Anime adaptation incomplete</option>
+                            <option value="anime_original">Anime-original story</option>
+                            <option value="different_ending">Anime has a different ending from source</option>
+                            <option value="unknown" selected>Adaptation status unknown</option>
+                            <option value="not_applicable">No applicable manga/source adaptation</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider">Entries (Classify into Main Watch Order or Optional Extras)</label>
+                        <div id="wizard-entries-list" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/50">
+                <button type="button" onclick="app.closeModal('franchise-wizard-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-950 transition-colors">Cancel</button>
+                <button type="button" id="wizard-save-btn" onclick="app.saveNewFranchise()" class="hidden px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-cyber-cyan to-brand-500 shadow-lg shadow-cyan-500/20 hover:brightness-110 transition-all">Save Franchise Watch Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 7: Edit Franchise Modal -->
+    <div id="edit-franchise-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="edit-franchise-modal-content">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-cyber-cyan"></i>
+                    <span>Edit Franchise Metadata</span>
+                </h3>
+                <button onclick="app.closeModal('edit-franchise-modal')" aria-label="Close modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="edit-franchise-form" onsubmit="app.saveEditedFranchise(event)" class="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto modal-scroll-mobile">
+                <input type="hidden" id="edit-franc-id">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Franchise Name *</label>
+                    <input type="text" id="edit-franc-name" required class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Adaptation Status</label>
+                    <select id="edit-franc-adaptation-status" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-xs text-slate-100 outline-none cursor-pointer">
+                        <option value="complete_adaptation">Manga adaptation complete</option>
+                        <option value="manga_ongoing">Source manga still ongoing</option>
+                        <option value="incomplete_adaptation">Anime adaptation incomplete</option>
+                        <option value="anime_original">Anime-original story</option>
+                        <option value="different_ending">Anime has a different ending from source</option>
+                        <option value="unknown">Adaptation status unknown</option>
+                        <option value="not_applicable">No applicable manga/source adaptation</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Adaptation Clarification / Notes (Optional)</label>
+                    <input type="text" id="edit-franc-adaptation-notes" placeholder="e.g. S1-S3 follow manga; movie has anime-original ending" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-xs text-slate-100 outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="app.closeModal('edit-franchise-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-950 transition-colors">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 8: Change Franchise Cover Image Modal -->
+    <div id="cover-franchise-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="cover-franchise-modal-content">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-image text-cyber-cyan"></i>
+                    <span>Change Franchise Cover Poster</span>
+                </h3>
+                <button onclick="app.closeModal('cover-franchise-modal')" aria-label="Close modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto modal-scroll-mobile">
+                <input type="hidden" id="cover-franc-id">
+
+                <!-- Existing Franchise Entries Poster Selector -->
+                <div>
+                    <label class="block text-xs font-semibold text-brand-300 uppercase tracking-wider mb-2">Select Poster from Franchise Titles</label>
+                    <div id="cover-poster-options" class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-950 rounded-xl border border-slate-800"></div>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-3 text-[10px] uppercase font-bold text-slate-500">Or enter URL</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Direct Image URL</label>
+                    <input type="url" id="cover-franc-url-input" placeholder="https://domain.com/poster.jpg" oninput="app.updateFranchiseCoverModalPreview()" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-xs text-slate-100 outline-none">
+                </div>
+
+                <div class="flex items-center gap-3 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+                    <img id="cover-modal-preview-img" src="" class="w-12 h-16 object-cover rounded-lg bg-slate-900 shrink-0">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-200">Active Cover Preview</p>
+                        <p class="text-[10px] text-slate-400">Updates franchise card poster only. Individual anime title posters will remain unchanged.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="app.closeModal('cover-franchise-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-950 transition-colors">Cancel</button>
+                    <button type="button" onclick="app.saveFranchiseCoverImage()" class="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Apply Cover</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 9: Add Title to Franchise Modal (Triple Tab: Search Collection, Catalogue Search & Manual Entry) -->
+    <div id="add-franchise-entry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 modal-sheet-mobile flex flex-col" id="add-franchise-entry-modal-content">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-cyber-cyan"></i>
+                    <span>Add Title to Franchise Order</span>
+                </h3>
+                <button onclick="app.closeModal('add-franchise-entry-modal')" aria-label="Close modal" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto modal-scroll-mobile">
+                <input type="hidden" id="add-fe-franchise-id">
+                <input type="hidden" id="add-fe-selected-collection-id">
+                <input type="hidden" id="add-fe-selected-external-id">
+                <input type="hidden" id="add-fe-selected-kitsu-id">
+                <input type="hidden" id="add-fe-selected-anilist-id">
+                <input type="hidden" id="add-fe-selected-rating">
+                <input type="hidden" id="add-fe-selected-source">
+
+                <!-- Tab Switcher (Search Collection vs Catalogue Search vs Manual Entry) -->
+                <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                    <button type="button" id="add-fe-tab-collection" onclick="app.switchAddFranchiseTab('collection')" class="py-2 rounded-lg font-bold bg-brand-600 text-white transition-colors">My Collection</button>
+                    <button type="button" id="add-fe-tab-catalog" onclick="app.switchAddFranchiseTab('catalog')" class="py-2 rounded-lg font-medium text-slate-400 hover:text-white transition-colors">Catalogue</button>
+                    <button type="button" id="add-fe-tab-manual" onclick="app.switchAddFranchiseTab('manual')" class="py-2 rounded-lg font-medium text-slate-400 hover:text-white transition-colors">Manual</button>
+                </div>
+
+                <!-- TAB A: SEARCH COLLECTION -->
+                <div id="add-fe-panel-collection" class="space-y-3">
+                    <div class="relative w-full">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="search" id="add-fe-collection-search-input" placeholder="Search my collection (English, Romaji, alternatives)..." class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl pl-9 pr-3.5 py-2 text-xs sm:text-sm text-slate-100 outline-none" oninput="app.searchFranchiseCollectionQuery()">
+                    </div>
+                    <div id="add-fe-collection-results" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- TAB B: CATALOGUE SEARCH -->
+                <div id="add-fe-panel-catalog" class="hidden space-y-3">
+                    <div class="flex gap-2">
+                        <input type="search" id="add-fe-catalog-search-input" placeholder="Search anime title, e.g. Attack on Titan..." class="flex-1 bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none" onkeydown="if(event.key==='Enter'){event.preventDefault();app.searchFranchiseAddCatalog();}">
+                        <button type="button" onclick="app.searchFranchiseAddCatalog()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 transition-all"><i class="fa-solid fa-magnifying-glass mr-1"></i> Search</button>
+                    </div>
+                    <div id="add-fe-catalog-status" class="hidden text-xs text-slate-400"></div>
+                    <div id="add-fe-catalog-results" class="hidden space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- TAB C: MANUAL ENTRY FORM -->
+                <form id="add-fe-manual-form" class="hidden space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Anime English Title *</label>
+                        <input type="text" id="add-fe-title-english" required placeholder="e.g. Attack on Titan Season 2" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Romanji Title</label>
+                        <input type="text" id="add-fe-title-romanji" placeholder="e.g. Shingeki no Kyojin Season 2" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3.5 py-2 text-sm text-slate-100 outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Media Format / Type</label>
+                            <input type="text" id="add-fe-season-info" placeholder="TV, Movie, OVA" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Total Episodes</label>
+                            <input type="number" id="add-fe-total-progress" min="0" value="12" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-1">Cover Image URL</label>
+                        <input type="url" id="add-fe-cover-url" placeholder="https://domain.com/poster.jpg" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                    </div>
+                </form>
+
+                <!-- Common Settings for All Tabs -->
+                <div class="space-y-3.5 pt-2 border-t border-slate-800">
+                    <div>
+                        <label class="block text-xs font-medium text-brand-300 uppercase tracking-wider mb-1">Watch Order Group *</label>
+                        <select id="add-fe-classification" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan rounded-xl px-3 py-2 text-xs text-slate-100 outline-none cursor-pointer">
+                            <option value="Main story">Main Watch Order</option>
+                            <option value="Optional extra">Optional Extras</option>
+                        </select>
+                    </div>
+
+                    <!-- Also add to Anime collection checkbox (visible only for catalogue/manual) -->
+                    <div id="sync-collection-container" class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-start gap-3">
+                        <input type="checkbox" id="add-fe-sync-collection" checked class="mt-0.5 w-4 h-4 rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-brand-500 cursor-pointer">
+                        <div>
+                            <label for="add-fe-sync-collection" class="text-xs font-bold text-slate-200 cursor-pointer">Also add this title to my Anime collection</label>
+                            <p class="text-[10px] text-slate-400 mt-0.5">If checked, creates a synchronized collection record so you can track personal progress and ratings. Skips automatically if already in your library.</p>
+                        </div>
+                    </div>
+
+                    <div id="add-fe-status-notice" class="hidden text-xs font-semibold text-emerald-400 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/50">
+                <button type="button" onclick="app.closeModal('add-franchise-entry-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-950 transition-colors">Cancel</button>
+                <button type="button" id="add-fe-submit-btn" onclick="app.submitAddFranchiseEntry()" class="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Add to Franchise</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Structured Modular Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/catalogue.js"></script>
+    <script src="js/collection.js"></script>
+    <script src="js/franchise.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

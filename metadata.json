@@ -1,0 +1,6 @@
+{
+  "name": "AniTrack — Anime & Manga Tracker",
+  "description": "Cyberpunk Anime & Manga Tracker and Watch Order platform with catalogue search, platform integrations, and local backup.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
