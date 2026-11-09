@@ -11,7 +11,8 @@ const StorageModule = {
         DEFAULTS_KEY: 'anitrack_defaults_v1',
         PREFERRED_SOURCE_KEY: 'anitrackPreferredMetadataSource',
         HIDDEN_FRANCHISES_KEY: 'anitrack_hidden_franchises_v1',
-        WATCH_ORDER_TITLE_MODE_KEY: 'anitrack_watch_order_title_mode_v1'
+        WATCH_ORDER_TITLE_MODE_KEY: 'anitrack_watch_order_title_mode_v1',
+        AUTO_BACKUP_KEY: 'anitrack_auto_backup_config_v1'
     },
 
     getDefaultPlatforms() {
@@ -248,12 +249,50 @@ const StorageModule = {
         localStorage.setItem(this.KEYS.WATCH_ORDER_TITLE_MODE_KEY, mode);
     },
 
+    getDefaultAutoBackupConfig() {
+        return {
+            enabled: true,
+            intervalDays: 30, // Default: ~1 month (30 days)
+            lastBackupDate: null,
+            nextBackupDate: Date.now() + (30 * 24 * 60 * 60 * 1000)
+        };
+    },
+
+    loadAutoBackupConfig() {
+        try {
+            const stored = localStorage.getItem(this.KEYS.AUTO_BACKUP_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                return {
+                    enabled: parsed.enabled !== false,
+                    intervalDays: Number(parsed.intervalDays) || 30,
+                    lastBackupDate: parsed.lastBackupDate || null,
+                    nextBackupDate: Number(parsed.nextBackupDate) || (Date.now() + (30 * 24 * 60 * 60 * 1000))
+                };
+            }
+        } catch (e) {
+            console.error('Failed to load auto-backup configuration', e);
+        }
+        const defaultConfig = this.getDefaultAutoBackupConfig();
+        this.saveAutoBackupConfig(defaultConfig);
+        return defaultConfig;
+    },
+
+    saveAutoBackupConfig(config) {
+        try {
+            localStorage.setItem(this.KEYS.AUTO_BACKUP_KEY, JSON.stringify(config));
+        } catch (e) {
+            console.error('Failed to save auto-backup configuration', e);
+        }
+    },
+
     resetAll() {
         localStorage.removeItem(this.KEYS.STORAGE_KEY);
         localStorage.removeItem(this.KEYS.FRANCHISES_KEY);
         localStorage.removeItem(this.KEYS.HIDDEN_FRANCHISES_KEY);
         localStorage.removeItem(this.KEYS.PLATFORMS_KEY);
         localStorage.removeItem(this.KEYS.DEFAULTS_KEY);
+        localStorage.removeItem(this.KEYS.AUTO_BACKUP_KEY);
     }
 };
 

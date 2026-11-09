@@ -22,7 +22,10 @@ const FranchiseModule = {
         return order.find(v => String(v || '').trim()) || 'Untitled';
     },
 
-    createFranchiseCardHTML(franc, matchedTitle = null, isHidden = false, entries = []) {
+    getFranchiseProgress(franc, entries = []) {
+        if (!franc || !Array.isArray(franc.entries)) {
+            return { totalEntries: 0, completedEntries: 0, pct: 0 };
+        }
         const totalEntries = franc.entries.length;
         let completedEntries = 0;
         franc.entries.forEach(e => {
@@ -33,6 +36,11 @@ const FranchiseModule = {
             }
         });
         const pct = totalEntries > 0 ? Math.round((completedEntries / totalEntries) * 100) : 0;
+        return { totalEntries, completedEntries, pct };
+    },
+
+    createFranchiseCardHTML(franc, matchedTitle = null, isHidden = false, entries = []) {
+        const { totalEntries, completedEntries, pct } = this.getFranchiseProgress(franc, entries);
         const adaptInfo = UIModule.getAdaptationBadgeInfo(franc.adaptationStatus);
 
         return `

@@ -21,6 +21,8 @@ class AniTrackApp {
         this.searchQuery = '';
         this.watchOrderSearchQuery = '';
         this.sortBy = 'updated';
+        this.watchOrderSortBy = 'updated';
+        this.autoBackupConfig = null;
         this.renderLimit = 30;
         this.renderBatchSize = 30;
 
@@ -49,6 +51,7 @@ class AniTrackApp {
         StorageModule.loadAll(this);
         this.setupEventListeners();
         this.setupPWA();
+        this.checkAutoBackupSchedule();
         this.render();
     }
 
@@ -120,12 +123,8 @@ class AniTrackApp {
             return;
         }
 
-        // Detect iOS / iPadOS (iPadOS reports as MacIntel with touch points)
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIOS = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-        // Always show install button on tablets/iOS devices where beforeinstallprompt doesn't fire natively
-        if (isIOS && installBtn) {
+        // On non-standalone browsers, make install button available
+        if (installBtn) {
             installBtn.classList.remove('hidden');
         }
 
@@ -138,18 +137,32 @@ class AniTrackApp {
         window.addEventListener('appinstalled', () => {
             this.deferredPrompt = null;
             if (installBtn) installBtn.classList.add('hidden');
-            this.showToast('AniTrack installed successfully!', 'success');
+            this.showToast('AniTrack installed successfully as a PWA!', 'success');
         });
+    }
+
+    launchDirectTab() {
+        window.open(window.location.href, '_blank');
     }
 
     installPWA() {
         if (this.deferredPrompt) {
             this.deferredPrompt.prompt();
-            this.deferredPrompt.userChoice.then(() => {
-                this.deferredPrompt = null;
-                document.getElementById('pwa-install-btn')?.classList.add('hidden');
-            });
+            this.deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult && choiceResult.outcome === 'accepted') {
+                    this.deferredPrompt = null;
+                    document.getElementById('pwa-install-btn')?.classList.add('hidden');
+                }
+            }).catch(err => console.warn('PWA prompt dismissed or failed:', err));
             return;
+        }
+
+        // Detect environment: iframe or platform
+        const isInIframe = window.self !== window.top;
+        const iframeNotice = document.getElementById('pwa-iframe-notice');
+        if (iframeNotice) {
+            if (isInIframe) iframeNotice.classList.remove('hidden');
+            else iframeNotice.classList.add('hidden');
         }
 
         // Tablet / iOS guide fallback
@@ -514,8 +527,27 @@ class AniTrackApp {
 
     clearWatchOrderSearch() {
         this.watchOrderSearchQuery = '';
-        document.getElementById('watch-order-search-input').value = '';
-        document.getElementById('watch-order-search-clear').classList.add('hidden');
+        const woInput = document.getElementById('watch-order-search-input');
+        if (woInput) woInput.value = '';
+        document.getElementById('watch-order-search-clear')?.classList.add('hidden');
+        this.renderGrid();
+    }
+
+    handleWatchOrderSort() {
+        const select = document.getElementById('watch-order-sort-select');
+        if (!select) return;
+        this.watchOrderSortBy = select.value;
+        this.renderGrid();
+    }
+
+    resetWatchOrderFilters() {
+        this.watchOrderSearchQuery = '';
+        this.watchOrderSortBy = 'updated';
+        const woInput = document.getElementById('watch-order-search-input');
+        if (woInput) woInput.value = '';
+        document.getElementById('watch-order-search-clear')?.classList.add('hidden');
+        const woSelect = document.getElementById('watch-order-sort-select');
+        if (woSelect) woSelect.value = 'updated';
         this.renderGrid();
     }
 
@@ -528,12 +560,15 @@ class AniTrackApp {
     resetFilters() {
         this.searchQuery = '';
         this.watchOrderSearchQuery = '';
+        this.watchOrderSortBy = 'updated';
         const searchInput = document.getElementById('search-input');
         if (searchInput) searchInput.value = '';
         const woInput = document.getElementById('watch-order-search-input');
         if (woInput) woInput.value = '';
         const woClear = document.getElementById('watch-order-search-clear');
         if (woClear) woClear.classList.add('hidden');
+        const woSelect = document.getElementById('watch-order-sort-select');
+        if (woSelect) woSelect.value = 'updated';
 
         this.sortBy = 'updated';
         const sortSelect = document.getElementById('sort-select');
@@ -1714,6 +1749,29 @@ class AniTrackApp {
                     return null;
                 }).filter(Boolean);
 
+                // Sort Watch Order Franchises
+                filteredFrancs.sort((a, b) => {
+                    const francA = a.franc;
+                    const francB = b.franc;
+
+                    if (this.watchOrderSortBy === 'complete_desc' || this.watchOrderSortBy === 'complete_asc') {
+                        const progA = FranchiseModule.getFranchiseProgress(francA, this.entries).pct;
+                        const progB = FranchiseModule.getFranchiseProgress(francB, this.entries).pct;
+                        if (this.watchOrderSortBy === 'complete_desc') {
+                            return progB - progA;
+                        } else {
+                            return progA - progB;
+                        }
+                    } else if (this.watchOrderSortBy === 'title_asc') {
+                        return (francA.name || '').localeCompare(francB.name || '', undefined, { sensitivity: 'base' });
+                    } else {
+                        // Default: 'updated' (Recent updates)
+                        const timeA = francA.updatedAt || francA.createdAt || 0;
+                        const timeB = francB.updatedAt || francB.createdAt || 0;
+                        return timeB - timeA;
+                    }
+                });
+
                 if (filteredFrancs.length === 0) {
                     grid.innerHTML = '';
                     emptyState.classList.remove('hidden');
@@ -2103,6 +2161,16 @@ class AniTrackApp {
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
+
+        // Update auto-backup last execution date and reschedule
+        if (this.autoBackupConfig) {
+            const intervalDays = Number(this.autoBackupConfig.intervalDays) || 30;
+            this.autoBackupConfig.lastBackupDate = Date.now();
+            this.autoBackupConfig.nextBackupDate = Date.now() + (intervalDays * 24 * 60 * 60 * 1000);
+            StorageModule.saveAutoBackupConfig(this.autoBackupConfig);
+            this.updateAutoBackupUI();
+        }
+
         this.showToast('Full AniTrack v2 backup downloaded!', 'success');
     }
 
@@ -2289,6 +2357,154 @@ class AniTrackApp {
 
         reader.readAsText(file);
         e.target.value = '';
+    }
+
+    // ==========================================
+    // Automatic Backup Schedule & Confirmation
+    // ==========================================
+
+    checkAutoBackupSchedule() {
+        this.autoBackupConfig = StorageModule.loadAutoBackupConfig();
+        if (!this.autoBackupConfig || !this.autoBackupConfig.enabled) return;
+
+        const now = Date.now();
+        if (this.autoBackupConfig.nextBackupDate && now >= this.autoBackupConfig.nextBackupDate) {
+            setTimeout(() => {
+                this.showAutoBackupPrompt();
+            }, 1200);
+        }
+    }
+
+    showAutoBackupPrompt() {
+        const modal = document.getElementById('auto-backup-prompt-modal');
+        if (!modal) return;
+        const dateStr = this.autoBackupConfig && this.autoBackupConfig.lastBackupDate 
+            ? new Date(this.autoBackupConfig.lastBackupDate).toLocaleDateString() 
+            : 'Never';
+        const lastEl = document.getElementById('auto-backup-prompt-last-date');
+        if (lastEl) lastEl.textContent = dateStr;
+        this.openModal('auto-backup-prompt-modal');
+    }
+
+    performAutoBackupDownload() {
+        this.exportJSON();
+        this.closeModal('auto-backup-prompt-modal');
+        this.showToast('Automatic backup completed! Next backup reminder scheduled.', 'success');
+    }
+
+    remindAutoBackupLater() {
+        if (!this.autoBackupConfig) this.autoBackupConfig = StorageModule.loadAutoBackupConfig();
+        // Postpone by 24 hours
+        this.autoBackupConfig.nextBackupDate = Date.now() + (24 * 60 * 60 * 1000);
+        StorageModule.saveAutoBackupConfig(this.autoBackupConfig);
+        this.closeModal('auto-backup-prompt-modal');
+        this.updateAutoBackupUI();
+        this.showToast('Backup reminder postponed for 24 hours.', 'info');
+    }
+
+    updateAutoBackupUI() {
+        this.autoBackupConfig = StorageModule.loadAutoBackupConfig();
+        const enabledToggle = document.getElementById('auto-backup-enabled-toggle');
+        const intervalSelect = document.getElementById('auto-backup-interval-select');
+        const customDaysContainer = document.getElementById('auto-backup-custom-days-container');
+        const customDaysInput = document.getElementById('auto-backup-custom-days-input');
+        const datetimeInput = document.getElementById('auto-backup-datetime-input');
+        const nextDueLabel = document.getElementById('auto-backup-next-due-label');
+        const lastBackupLabel = document.getElementById('auto-backup-last-date-label');
+
+        if (!enabledToggle || !intervalSelect) return;
+
+        enabledToggle.checked = !!this.autoBackupConfig.enabled;
+
+        const days = this.autoBackupConfig.intervalDays || 30;
+        if ([7, 14, 30, 60, 90].includes(days)) {
+            intervalSelect.value = String(days);
+            if (customDaysContainer) customDaysContainer.classList.add('hidden');
+        } else {
+            intervalSelect.value = 'custom';
+            if (customDaysContainer) customDaysContainer.classList.remove('hidden');
+            if (customDaysInput) customDaysInput.value = days;
+        }
+
+        if (datetimeInput && this.autoBackupConfig.nextBackupDate) {
+            const d = new Date(this.autoBackupConfig.nextBackupDate);
+            const pad = (n) => String(n).padStart(2, '0');
+            datetimeInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        if (nextDueLabel) {
+            nextDueLabel.textContent = this.autoBackupConfig.nextBackupDate 
+                ? new Date(this.autoBackupConfig.nextBackupDate).toLocaleString() 
+                : 'Not scheduled';
+        }
+
+        if (lastBackupLabel) {
+            lastBackupLabel.textContent = this.autoBackupConfig.lastBackupDate 
+                ? new Date(this.autoBackupConfig.lastBackupDate).toLocaleString() 
+                : 'Never';
+        }
+    }
+
+    handleAutoBackupIntervalChange() {
+        const intervalSelect = document.getElementById('auto-backup-interval-select');
+        const customDaysContainer = document.getElementById('auto-backup-custom-days-container');
+        const customDaysInput = document.getElementById('auto-backup-custom-days-input');
+        const datetimeInput = document.getElementById('auto-backup-datetime-input');
+
+        if (!intervalSelect) return;
+
+        if (intervalSelect.value === 'custom') {
+            if (customDaysContainer) customDaysContainer.classList.remove('hidden');
+            const customVal = Math.max(1, parseInt(customDaysInput?.value) || 30);
+            const targetTime = Date.now() + (customVal * 24 * 60 * 60 * 1000);
+            const d = new Date(targetTime);
+            const pad = (n) => String(n).padStart(2, '0');
+            if (datetimeInput) {
+                datetimeInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+        } else {
+            if (customDaysContainer) customDaysContainer.classList.add('hidden');
+            const days = parseInt(intervalSelect.value) || 30;
+            const targetTime = Date.now() + (days * 24 * 60 * 60 * 1000);
+            const d = new Date(targetTime);
+            const pad = (n) => String(n).padStart(2, '0');
+            if (datetimeInput) {
+                datetimeInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+        }
+    }
+
+    saveAutoBackupSettingsFromUI() {
+        const enabledToggle = document.getElementById('auto-backup-enabled-toggle');
+        const intervalSelect = document.getElementById('auto-backup-interval-select');
+        const customDaysInput = document.getElementById('auto-backup-custom-days-input');
+        const datetimeInput = document.getElementById('auto-backup-datetime-input');
+
+        if (!enabledToggle || !intervalSelect) return;
+
+        if (!this.autoBackupConfig) this.autoBackupConfig = StorageModule.loadAutoBackupConfig();
+
+        let days = intervalSelect.value === 'custom' 
+            ? Math.max(1, parseInt(customDaysInput?.value) || 30) 
+            : parseInt(intervalSelect.value) || 30;
+
+        let nextTimestamp = this.autoBackupConfig.nextBackupDate;
+        if (datetimeInput && datetimeInput.value) {
+            const parsed = new Date(datetimeInput.value).getTime();
+            if (!isNaN(parsed) && parsed > 0) {
+                nextTimestamp = parsed;
+            }
+        } else {
+            nextTimestamp = Date.now() + (days * 24 * 60 * 60 * 1000);
+        }
+
+        this.autoBackupConfig.enabled = enabledToggle.checked;
+        this.autoBackupConfig.intervalDays = days;
+        this.autoBackupConfig.nextBackupDate = nextTimestamp;
+
+        StorageModule.saveAutoBackupConfig(this.autoBackupConfig);
+        this.updateAutoBackupUI();
+        this.showToast('Automatic backup schedule saved successfully!', 'success');
     }
 }
 

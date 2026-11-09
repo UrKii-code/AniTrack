@@ -1,15 +1,19 @@
-const CACHE_NAME = 'anitrack-v4.3';
+const CACHE_NAME = 'anitrack-v5.0';
 const STATIC_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './css/style.css',
-  './js/storage.js',
-  './js/ui.js',
-  './js/catalogue.js',
-  './js/collection.js',
-  './js/franchise.js',
-  './js/app.js',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
+  '/favicon.png',
+  '/css/style.css',
+  '/js/storage.js',
+  '/js/ui.js',
+  '/js/catalogue.js',
+  '/js/collection.js',
+  '/js/franchise.js',
+  '/js/app.js',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
@@ -34,9 +38,17 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Stale-While-Revalidate Strategy
+// Fetch Event - Stale-While-Revalidate with Navigation Fallback
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Handle HTML navigation requests
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html') || caches.match('/'))
+    );
+    return;
+  }
 
   // Never cache external API search requests
   if (event.request.url.includes('kitsu.io') || event.request.url.includes('anilist.co')) {

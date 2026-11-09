@@ -11,14 +11,16 @@
     <meta name="twitter:card" content="summary_large_image" />
 
     <!-- PWA Meta & Links -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=5.0">
     <meta name="theme-color" content="#030712">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AniTrack">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5.0">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5.0">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png?v=5.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5.0">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -77,18 +79,18 @@
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
                 <div class="flex items-center space-x-3 cursor-pointer" onclick="app.resetFilters()" role="button" aria-label="Reset filters and return to top">
-                    <img src="icon-192.png" alt="AniTrack Logo" class="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/20 border border-brand-500/30 object-cover" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%236366f1\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'white\' font-family=\'sans-serif\' font-size=\'20\' font-weight=\'bold\'%3EA%3C/text%3E%3C/svg%3E';">
+                    <img src="icon-192.png?v=5.0" alt="AniTrack Logo" class="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/20 border border-brand-500/30 object-cover" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%236366f1\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'white\' font-family=\'sans-serif\' font-size=\'20\' font-weight=\'bold\'%3EA%3C/text%3E%3C/svg%3E';">
                     <div>
                         <span class="text-2xl font-black tracking-wider text-gradient">AniTrack</span>
-                        <span class="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20 ml-2">v4.0</span>
+                        <span class="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20 ml-2">v5.0</span>
                     </div>
                 </div>
 
                 <!-- Action Controls -->
                 <div class="flex items-center space-x-1 sm:space-x-3">
-                    <button id="pwa-install-btn" onclick="app.installPWA()" class="hidden bg-slate-900 hover:bg-slate-800 text-cyber-cyan border border-cyber-cyan/40 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/10 active:scale-95">
+                    <button id="pwa-install-btn" onclick="app.installPWA()" class="bg-slate-900 hover:bg-slate-800 text-cyber-cyan border border-cyber-cyan/40 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/10 active:scale-95" title="Install AniTrack App (Home Screen / Tablet / Desktop)">
                         <i class="fa-solid fa-download"></i>
-                        <span class="hidden sm:inline">Install</span>
+                        <span class="hidden xs:inline sm:inline">Install</span>
                     </button>
 
                     <button onclick="app.openModal('entry-modal')" aria-label="Add new entry" class="bg-gradient-to-r from-brand-600 to-cyber-purple hover:from-brand-500 hover:to-cyber-pink active:scale-95 text-white font-semibold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-lg shadow-brand-600/30 transition-all flex items-center gap-1 sm:gap-2">
@@ -200,13 +202,33 @@
                 </div>
             </div>
 
-            <!-- Watch Order Main Search Bar (Visible only on Watch Order tab when not viewing single franchise detail) -->
-            <div id="watch-order-search-wrapper" class="hidden pt-2 border-t border-slate-800/80 space-y-2">
-                <div class="relative w-full">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs sm:text-sm"></i>
-                    <input type="text" id="watch-order-search-input" oninput="app.handleWatchOrderSearch()" placeholder="Search Watch Order (franchises, titles, Romaji)..." class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan text-xs sm:text-sm text-slate-200 placeholder-slate-500 rounded-xl pl-9 sm:pl-10 pr-9 py-2 sm:py-2.5 outline-none transition-all">
-                    <button onclick="app.clearWatchOrderSearch()" id="watch-order-search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
+            <!-- Watch Order Main Search & Sort Bar (Visible only on Watch Order tab when not viewing single franchise detail) -->
+            <div id="watch-order-search-wrapper" class="hidden pt-2.5 border-t border-slate-800/80 space-y-2.5">
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3">
+                    <div class="relative sm:col-span-7">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-cyber-cyan text-xs sm:text-sm"></i>
+                        <input type="text" id="watch-order-search-input" oninput="app.handleWatchOrderSearch()" placeholder="Search Watch Order (franchises, titles, Romaji)..." class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan text-xs sm:text-sm text-slate-200 placeholder-slate-500 rounded-xl pl-9 sm:pl-10 pr-9 py-2.5 outline-none transition-all">
+                        <button onclick="app.clearWatchOrderSearch()" id="watch-order-search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div class="sm:col-span-5 flex items-center gap-2">
+                        <div class="relative w-full">
+                            <i class="fa-solid fa-arrow-down-wide-short absolute left-3.5 top-1/2 -translate-y-1/2 text-cyber-cyan text-xs sm:text-sm"></i>
+                            <select id="watch-order-sort-select" onchange="app.handleWatchOrderSort()" class="w-full bg-slate-950 border border-slate-800 focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan text-xs sm:text-sm text-slate-200 rounded-xl pl-9 sm:pl-10 pr-8 py-2.5 outline-none transition-all appearance-none cursor-pointer">
+                                <option value="updated">Recent updates</option>
+                                <option value="complete_desc">Complete to uncomplete</option>
+                                <option value="complete_asc">Uncomplete to complete</option>
+                                <option value="title_asc">A - Z</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+                        </div>
+
+                        <button onclick="app.resetWatchOrderFilters()" class="p-2.5 text-slate-400 hover:text-white active:scale-95 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all shrink-0" title="Reset Watch Order Filters" aria-label="Reset Watch Order Filters">
+                            <i class="fa-solid fa-rotate-left text-xs sm:text-sm"></i>
+                        </button>
+                    </div>
                 </div>
+
                 <div class="flex items-center gap-2 text-xs text-slate-400">
                     <label class="flex items-center gap-1.5 cursor-pointer">
                         <input type="checkbox" id="include-hidden-franchises-checkbox" onchange="app.renderGrid()" class="rounded bg-slate-900 border-slate-700 text-cyber-cyan focus:ring-cyber-cyan cursor-pointer">
@@ -628,6 +650,72 @@
                     </div>
                 </div>
 
+                <!-- Automatic Scheduled Backup Settings Section -->
+                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm font-semibold text-emerald-400">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Automatic Scheduled Backup</span>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Monthly / Custom</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Periodically prompts you to download and save your local anime, manga, and watch order backups with a confirmation dialog.</p>
+
+                    <div class="flex items-center justify-between bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-xs font-medium text-slate-200">Enable Automatic Backup Reminder</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="auto-backup-enabled-toggle" onchange="app.saveAutoBackupSettingsFromUI()" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Backup Interval</label>
+                            <select id="auto-backup-interval-select" onchange="app.handleAutoBackupIntervalChange()" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none cursor-pointer">
+                                <option value="30" selected>Every 1 Month (30 days)</option>
+                                <option value="14">Every 2 Weeks (14 days)</option>
+                                <option value="60">Every 2 Months (60 days)</option>
+                                <option value="90">Every 3 Months (90 days)</option>
+                                <option value="7">Every 1 Week (7 days)</option>
+                                <option value="custom">Custom interval (days)</option>
+                            </select>
+                        </div>
+                        <div id="auto-backup-custom-days-container" class="hidden">
+                            <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Custom Days</label>
+                            <input type="number" id="auto-backup-custom-days-input" min="1" max="365" value="30" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                            <i class="fa-solid fa-calendar-days text-cyber-cyan mr-1"></i> Scheduled Date & Time
+                        </label>
+                        <input type="datetime-local" id="auto-backup-datetime-input" class="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-cyber-cyan">
+                        <p class="text-[10px] text-slate-500 mt-1">You can customize the exact day and time for your next backup reminder.</p>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 space-y-1 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Next Backup Due:</span>
+                            <span id="auto-backup-next-due-label" class="font-bold text-cyber-cyan">Calculating...</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Last Backup:</span>
+                            <span id="auto-backup-last-date-label" class="text-slate-300">Never</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <button type="button" onclick="app.saveAutoBackupSettingsFromUI()" class="w-full bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/40 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Schedule
+                        </button>
+                        <button type="button" onclick="app.performAutoBackupDownload()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md">
+                            <i class="fa-solid fa-download"></i> Backup Now
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Full JSON Backup & Restore with Scope Filters -->
                 <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
                     <div class="flex items-center justify-between">
@@ -948,6 +1036,8 @@
                 <button type="button" id="add-fe-submit-btn" onclick="app.submitAddFranchiseEntry()" class="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Add to Franchise</button>
             </div>
         </div>
+    </div>
+
     <!-- Modal 10: PWA Installation Guide Modal for Tablets and Devices -->
     <div id="pwa-install-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
         <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4 text-center transform scale-95 transition-transform duration-200 modal-sheet-mobile" id="pwa-install-modal-content">
@@ -958,12 +1048,26 @@
                 <h3 class="text-base sm:text-lg font-bold text-white">Install AniTrack App</h3>
                 <p class="text-xs text-slate-400 mt-1">Get the full-screen standalone tablet & mobile experience with instant access and offline tracking.</p>
             </div>
+
+            <!-- Iframe Environment Warning and Direct Launcher -->
+            <div id="pwa-iframe-notice" class="hidden text-left bg-brand-500/15 border border-brand-500/30 p-3.5 rounded-xl space-y-2 text-xs text-brand-200">
+                <div class="flex items-center gap-2 font-bold text-cyber-cyan">
+                    <i class="fa-solid fa-up-right-from-square"></i>
+                    <span>Embedded Preview Detected</span>
+                </div>
+                <p class="text-slate-300 leading-relaxed text-[11px]">
+                    Browsers block PWA installation inside embedded iframes. Open AniTrack in a direct browser tab to enable 1-click home screen or desktop install.
+                </p>
+                <button onclick="app.launchDirectTab()" class="w-full py-2 px-3 rounded-lg bg-cyber-cyan hover:brightness-110 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-500/10">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Direct App in New Tab
+                </button>
+            </div>
             
             <div id="pwa-install-guide-ios" class="text-left bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs text-slate-300">
                 <p class="font-bold text-cyber-cyan flex items-center gap-2">
                     <i class="fa-brands fa-apple text-base"></i> iPad / iPhone Instructions:
                 </p>
-                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed">
+                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed text-[11px]">
                     <li>Tap the <strong class="text-white"><i class="fa-solid fa-arrow-up-from-bracket text-cyber-cyan"></i> Share</strong> button in Safari's top toolbar.</li>
                     <li>Scroll down and select <strong class="text-white"><i class="fa-solid fa-plus-square text-brand-400"></i> Add to Home Screen</strong>.</li>
                     <li>Tap <strong class="text-white">Add</strong> in the top-right corner to finish.</li>
@@ -974,14 +1078,59 @@
                 <p class="font-bold text-cyber-cyan flex items-center gap-2">
                     <i class="fa-solid fa-tablet-screen-button text-base"></i> Tablet / Browser Instructions:
                 </p>
-                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed">
-                    <li>Tap your browser menu (<strong class="text-white"><i class="fa-solid fa-ellipsis-vertical"></i></strong>).</li>
-                    <li>Choose <strong class="text-white">Install App</strong> or <strong class="text-white">Add to Home Screen</strong>.</li>
-                    <li>Confirm installation to launch as a native tablet app.</li>
+                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed text-[11px]">
+                    <li>Tap your browser menu (<strong class="text-white"><i class="fa-solid fa-ellipsis-vertical"></i></strong> or address bar icon).</li>
+                    <li>Choose <strong class="text-white">Install App</strong> or <strong class="text-white">Add to Home screen</strong>.</li>
+                    <li>Confirm to run as an ultra-fast standalone application.</li>
                 </ol>
             </div>
 
-            <button onclick="app.closeModal('pwa-install-modal')" class="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Got It</button>
+            <div class="flex items-center gap-2">
+                <button onclick="app.launchDirectTab()" class="w-1/2 py-2.5 rounded-xl text-xs font-semibold text-cyber-cyan bg-slate-950 hover:bg-slate-900 border border-cyber-cyan/30 transition-all flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-external-link text-xs"></i> New Tab
+                </button>
+                <button onclick="app.closeModal('pwa-install-modal')" class="w-1/2 py-2.5 rounded-xl text-xs font-semibold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 11: Automatic Backup Confirmation Dialog -->
+    <div id="auto-backup-prompt-modal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-4 text-center transform scale-95 transition-transform duration-200" id="auto-backup-prompt-modal-content">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 flex items-center justify-center mx-auto text-2xl shadow-lg shadow-emerald-500/20 border border-white/20">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-white">Scheduled Backup Reminder</h3>
+                <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    It's time for your periodic backup! Protect your anime tracking, franchises, and custom link settings.
+                </p>
+            </div>
+
+            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-left text-xs space-y-1">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Last backup:</span>
+                    <span id="auto-backup-prompt-last-date" class="font-semibold text-emerald-400">Never</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Target storage:</span>
+                    <span class="font-semibold text-slate-300">Local Download (JSON)</span>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <button onclick="app.performAutoBackupDownload()" class="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-download"></i> Download Backup Now
+                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="app.remindAutoBackupLater()" class="w-1/2 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-950 border border-slate-800 transition-colors">
+                        Remind in 24h
+                    </button>
+                    <button onclick="app.closeModal('auto-backup-prompt-modal'); app.openModal('data-modal');" class="w-1/2 py-2 rounded-xl text-xs font-medium text-cyber-cyan hover:text-white bg-slate-950 border border-slate-800 transition-colors">
+                        Edit Schedule
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

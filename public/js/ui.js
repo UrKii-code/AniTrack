@@ -64,6 +64,7 @@ const UIModule = {
 
         if (window.app) {
             if (modalId === 'platforms-modal') app.renderPlatformsList();
+            if (modalId === 'data-modal' && app.updateAutoBackupUI) app.updateAutoBackupUI();
             if (modalId === 'franchise-wizard-modal') {
                 const queryInput = document.getElementById('franchise-query-input');
                 if (queryInput) queryInput.value = '';
