@@ -40,6 +40,7 @@ class AniTrackApp {
         this.wizardAbortController = null;
         this.addFranchiseAbortController = null;
         this.deferredPrompt = null;
+        this.isInstalled = false;
 
         // Pending duplicate resolution buffer
         this.pendingDuplicateEntry = null;
@@ -51,6 +52,7 @@ class AniTrackApp {
         StorageModule.loadAll(this);
         this.setupEventListeners();
         this.setupPWA();
+        this.detectInstalledState();
         this.checkAutoBackupSchedule();
         this.render();
     }
@@ -110,54 +112,159 @@ class AniTrackApp {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(err => {
-                    console.warn('Service Worker registration failed:', err);
+                    console.warn('PWA: Service Worker registration error:', err);
                 });
             });
         }
 
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        const installBtn = document.getElementById('pwa-install-btn');
-
-        if (isStandalone) {
-            if (installBtn) installBtn.classList.add('hidden');
-            return;
-        }
-
-        // On non-standalone browsers, make install button available
-        if (installBtn) {
-            installBtn.classList.remove('hidden');
-        }
-
+        // Capture browser installation prompt event (only fires when browser validates app criteria)
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
-            if (installBtn) installBtn.classList.remove('hidden');
+            console.log('PWA: beforeinstallprompt received from browser');
+            this.updateInstallUI();
         });
 
+        // Capture when app has finished installation
         window.addEventListener('appinstalled', () => {
+            this.isInstalled = true;
             this.deferredPrompt = null;
-            if (installBtn) installBtn.classList.add('hidden');
-            this.showToast('AniTrack installed successfully as a PWA!', 'success');
+            localStorage.setItem('anitrack_is_installed', 'true');
+            this.updateInstallUI();
+            this.showToast('AniTrack installed successfully as an application!', 'success');
         });
+
+        // Listen for display-mode changes (e.g. user opens standalone window)
+        try {
+            const standaloneMedia = window.matchMedia('(display-mode: standalone)');
+            standaloneMedia.addEventListener('change', (evt) => {
+                if (evt.matches) {
+                    this.isInstalled = true;
+                    this.updateInstallUI();
+                }
+            });
+        } catch (err) {
+            // Older browser fallback
+        }
+    }
+
+    async detectInstalledState() {
+        // 1. Display-mode standalone or fullscreen check
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                            window.matchMedia('(display-mode: fullscreen)').matches ||
+                            window.matchMedia('(display-mode: minimal-ui)').matches;
+
+        // 2. iOS Safari standalone boolean
+        const isIOSStandalone = window.navigator && window.navigator.standalone === true;
+
+        // 3. Android app referrer check
+        const isAndroidReferrer = document.referrer.includes('android-app://');
+
+        // 4. Stored persistent install flag
+        const storedInstalled = localStorage.getItem('anitrack_is_installed') === 'true';
+
+        // 5. Chromium getInstalledRelatedApps API (if supported)
+        let hasRelatedApp = false;
+        if ('getInstalledRelatedApps' in navigator && typeof navigator.getInstalledRelatedApps === 'function') {
+            try {
+                const apps = await navigator.getInstalledRelatedApps();
+                if (Array.isArray(apps) && apps.length > 0) {
+                    hasRelatedApp = true;
+                }
+            } catch (e) {
+                // Ignore API access limitations
+            }
+        }
+
+        this.isInstalled = isStandalone || isIOSStandalone || isAndroidReferrer || (storedInstalled && isStandalone) || hasRelatedApp;
+        this.updateInstallUI();
+        return this.isInstalled;
+    }
+
+    updateInstallUI() {
+        const installBtn = document.getElementById('pwa-install-btn');
+        const guideBtn = document.getElementById('pwa-guide-btn');
+
+        if (this.isInstalled) {
+            // If already installed, hide both buttons completely
+            if (installBtn) installBtn.classList.add('hidden');
+            if (guideBtn) guideBtn.classList.add('hidden');
+            return;
+        }
+
+        if (this.deferredPrompt) {
+            // ONLY show the actual Install button when beforeinstallprompt is ready
+            if (installBtn) {
+                installBtn.classList.remove('hidden');
+                installBtn.classList.add('flex');
+            }
+            if (guideBtn) guideBtn.classList.add('hidden');
+        } else {
+            // When beforeinstallprompt is not available, show separate guide button
+            if (installBtn) installBtn.classList.add('hidden');
+            if (guideBtn) {
+                guideBtn.classList.remove('hidden');
+                guideBtn.classList.add('flex');
+            }
+        }
     }
 
     launchDirectTab() {
         window.open(window.location.href, '_blank');
     }
 
-    installPWA() {
+    async installPWA() {
+        // If beforeinstallprompt is available, execute native prompt
         if (this.deferredPrompt) {
-            this.deferredPrompt.prompt();
-            this.deferredPrompt.userChoice.then((choiceResult) => {
+            try {
+                await this.deferredPrompt.prompt();
+                const choiceResult = await this.deferredPrompt.userChoice;
                 if (choiceResult && choiceResult.outcome === 'accepted') {
+                    this.isInstalled = true;
                     this.deferredPrompt = null;
-                    document.getElementById('pwa-install-btn')?.classList.add('hidden');
+                    localStorage.setItem('anitrack_is_installed', 'true');
+                    this.updateInstallUI();
+                    this.showToast('Installing AniTrack to your device...', 'success');
+                } else {
+                    this.showToast('Installation prompt was dismissed.', 'info');
                 }
-            }).catch(err => console.warn('PWA prompt dismissed or failed:', err));
+            } catch (err) {
+                console.warn('PWA install prompt error:', err);
+                this.openPwaGuide();
+            }
             return;
         }
 
-        // Detect environment: iframe or platform
+        // If beforeinstallprompt is not available, open dedicated installation guide
+        this.openPwaGuide();
+    }
+
+    openPwaGuide(targetTab = null) {
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isSamsung = userAgent.includes('samsungbrowser');
+        const isAndroidChrome = userAgent.includes('android') && userAgent.includes('chrome') && !isSamsung;
+        const isIOS = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        
+        let detectedName = 'Desktop Browser (Chrome / Edge)';
+        let initialTab = 'desktop';
+
+        if (isSamsung) {
+            detectedName = 'Samsung Internet (Galaxy Tablet / Phone)';
+            initialTab = 'samsung';
+        } else if (isAndroidChrome) {
+            detectedName = 'Android Chrome Browser';
+            initialTab = 'chrome';
+        } else if (isIOS) {
+            detectedName = 'Apple Safari (iPad / iPhone)';
+            initialTab = 'ios';
+        }
+
+        const detectedEl = document.getElementById('pwa-detected-browser');
+        if (detectedEl) {
+            detectedEl.textContent = `Detected: ${detectedName}`;
+        }
+
+        // Detect iframe preview window
         const isInIframe = window.self !== window.top;
         const iframeNotice = document.getElementById('pwa-iframe-notice');
         if (iframeNotice) {
@@ -165,22 +272,76 @@ class AniTrackApp {
             else iframeNotice.classList.add('hidden');
         }
 
-        // Tablet / iOS guide fallback
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIOS = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        this.switchPwaGuideTab(targetTab || initialTab);
+        this.checkPwaStatusDiagnostics();
+        this.openModal('pwa-install-modal');
+    }
 
-        const iosGuide = document.getElementById('pwa-install-guide-ios');
-        const genGuide = document.getElementById('pwa-install-guide-generic');
+    switchPwaGuideTab(tabName) {
+        const tabs = ['samsung', 'chrome', 'ios', 'desktop'];
+        tabs.forEach(name => {
+            const btn = document.getElementById(`tab-guide-${name}`);
+            const panel = document.getElementById(`guide-panel-${name}`);
+            if (name === tabName) {
+                if (btn) btn.className = "py-1.5 px-1 rounded-lg transition-colors bg-cyber-cyan text-slate-950 font-bold shadow-sm";
+                if (panel) panel.classList.remove('hidden');
+            } else {
+                if (btn) btn.className = "py-1.5 px-1 rounded-lg transition-colors text-slate-400 hover:text-white";
+                if (panel) panel.classList.add('hidden');
+            }
+        });
+    }
 
-        if (isIOS) {
-            if (iosGuide) iosGuide.classList.remove('hidden');
-            if (genGuide) genGuide.classList.add('hidden');
-        } else {
-            if (iosGuide) iosGuide.classList.add('hidden');
-            if (genGuide) genGuide.classList.remove('hidden');
+    async checkPwaStatusDiagnostics() {
+        const httpsEl = document.getElementById('pwa-diag-https');
+        const manifestEl = document.getElementById('pwa-diag-manifest');
+        const swEl = document.getElementById('pwa-diag-sw');
+        const promptEl = document.getElementById('pwa-diag-prompt');
+
+        // 1. Check HTTPS
+        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (httpsEl) {
+            httpsEl.className = isSecure ? "font-bold text-emerald-400" : "font-bold text-rose-400";
+            httpsEl.textContent = isSecure ? "Active (Secure)" : "Insecure (HTTP)";
         }
 
-        this.openModal('pwa-install-modal');
+        // 2. Check Manifest & Icons
+        if (manifestEl) {
+            try {
+                const res = await fetch('./manifest.json', { cache: 'no-cache' });
+                if (res.ok) {
+                    manifestEl.className = "font-bold text-emerald-400";
+                    manifestEl.textContent = "Valid (Loaded)";
+                } else {
+                    manifestEl.className = "font-bold text-rose-400";
+                    manifestEl.textContent = `Error (${res.status})`;
+                }
+            } catch (err) {
+                manifestEl.className = "font-bold text-amber-400";
+                manifestEl.textContent = "Check Relative Path";
+            }
+        }
+
+        // 3. Check Service Worker
+        if (swEl) {
+            const isSwActive = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+            swEl.className = isSwActive ? "font-bold text-emerald-400" : "font-bold text-amber-400";
+            swEl.textContent = isSwActive ? "Active & Running" : "Registering...";
+        }
+
+        // 4. Check Install Prompt Event
+        if (promptEl) {
+            if (this.isInstalled) {
+                promptEl.className = "font-bold text-emerald-400";
+                promptEl.textContent = "App Installed";
+            } else if (this.deferredPrompt) {
+                promptEl.className = "font-bold text-cyber-cyan";
+                promptEl.textContent = "Ready (Prompt Available)";
+            } else {
+                promptEl.className = "font-bold text-slate-400";
+                promptEl.textContent = "Managed by Browser";
+            }
+        }
     }
 
     setApiSource(source) {

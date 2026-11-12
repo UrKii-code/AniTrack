@@ -88,9 +88,16 @@
 
                 <!-- Action Controls -->
                 <div class="flex items-center space-x-1 sm:space-x-3">
-                    <button id="pwa-install-btn" onclick="app.installPWA()" class="bg-slate-900 hover:bg-slate-800 text-cyber-cyan border border-cyber-cyan/40 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/10 active:scale-95" title="Install AniTrack App (Home Screen / Tablet / Desktop)">
+                    <!-- Actual Install Button: ONLY shown when beforeinstallprompt event is available and app not installed -->
+                    <button id="pwa-install-btn" onclick="app.installPWA()" class="hidden bg-gradient-to-r from-cyber-cyan/20 to-brand-500/20 hover:from-cyber-cyan/30 hover:to-brand-500/30 text-cyber-cyan border border-cyber-cyan/50 p-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 active:scale-95" title="Install AniTrack directly to your device">
                         <i class="fa-solid fa-download"></i>
                         <span class="hidden xs:inline sm:inline">Install</span>
+                    </button>
+
+                    <!-- Separate Installation Guide Button: Shown when not installed and beforeinstallprompt is not available -->
+                    <button id="pwa-guide-btn" onclick="app.openPwaGuide()" class="hidden bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 p-2 sm:px-3 sm:py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 active:scale-95" title="How to Install on Samsung Internet, Chrome, iOS & Desktop">
+                        <i class="fa-solid fa-circle-question text-cyber-cyan"></i>
+                        <span class="hidden md:inline">How to Install</span>
                     </button>
 
                     <button onclick="app.openModal('entry-modal')" aria-label="Add new entry" class="bg-gradient-to-r from-brand-600 to-cyber-purple hover:from-brand-500 hover:to-cyber-pink active:scale-95 text-white font-semibold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-lg shadow-brand-600/30 transition-all flex items-center gap-1 sm:gap-2">
@@ -1038,58 +1045,172 @@
         </div>
     </div>
 
-    <!-- Modal 10: PWA Installation Guide Modal for Tablets and Devices -->
+    <!-- Modal 10: Dedicated PWA Installation Guide Modal for All Browsers & Devices -->
     <div id="pwa-install-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200 modal-backdrop-mobile">
-        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4 text-center transform scale-95 transition-transform duration-200 modal-sheet-mobile" id="pwa-install-modal-content">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-cyber-cyan text-slate-950 flex items-center justify-center mx-auto text-2xl shadow-lg shadow-cyan-500/20 border border-white/20">
-                <i class="fa-solid fa-download"></i>
-            </div>
-            <div>
-                <h3 class="text-base sm:text-lg font-bold text-white">Install AniTrack App</h3>
-                <p class="text-xs text-slate-400 mt-1">Get the full-screen standalone tablet & mobile experience with instant access and offline tracking.</p>
+        <div class="glass-card bg-slate-900/98 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-5 sm:p-6 space-y-4 text-center transform scale-95 transition-transform duration-200 modal-sheet-mobile max-h-[90vh] overflow-y-auto" id="pwa-install-modal-content">
+            
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div class="flex items-center gap-2.5 text-left">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-cyber-cyan text-slate-950 flex items-center justify-center text-lg shadow-md border border-white/20 shrink-0">
+                        <i class="fa-solid fa-download"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">How to Install AniTrack</h3>
+                        <p id="pwa-detected-browser" class="text-[11px] text-cyber-cyan font-medium">Detecting your browser...</p>
+                    </div>
+                </div>
+                <button onclick="app.closeModal('pwa-install-modal')" class="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <!-- Iframe Environment Warning and Direct Launcher -->
             <div id="pwa-iframe-notice" class="hidden text-left bg-brand-500/15 border border-brand-500/30 p-3.5 rounded-xl space-y-2 text-xs text-brand-200">
                 <div class="flex items-center gap-2 font-bold text-cyber-cyan">
                     <i class="fa-solid fa-up-right-from-square"></i>
-                    <span>Embedded Preview Detected</span>
+                    <span>Embedded Preview Window Detected</span>
                 </div>
                 <p class="text-slate-300 leading-relaxed text-[11px]">
-                    Browsers block PWA installation inside embedded iframes. Open AniTrack in a direct browser tab to enable 1-click home screen or desktop install.
+                    Web browsers block install events inside embedded preview frames. Open AniTrack directly in your browser to enable one-click installation:
                 </p>
                 <button onclick="app.launchDirectTab()" class="w-full py-2 px-3 rounded-lg bg-cyber-cyan hover:brightness-110 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-500/10">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Direct App in New Tab
                 </button>
             </div>
-            
-            <div id="pwa-install-guide-ios" class="text-left bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs text-slate-300">
-                <p class="font-bold text-cyber-cyan flex items-center gap-2">
-                    <i class="fa-brands fa-apple text-base"></i> iPad / iPhone Instructions:
+
+            <!-- Browser Guide Selector Tabs -->
+            <div class="grid grid-cols-4 gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
+                <button type="button" id="tab-guide-samsung" onclick="app.switchPwaGuideTab('samsung')" class="py-1.5 px-1 rounded-lg transition-colors text-slate-400 hover:text-white">Samsung</button>
+                <button type="button" id="tab-guide-chrome" onclick="app.switchPwaGuideTab('chrome')" class="py-1.5 px-1 rounded-lg transition-colors text-slate-400 hover:text-white">Chrome</button>
+                <button type="button" id="tab-guide-ios" onclick="app.switchPwaGuideTab('ios')" class="py-1.5 px-1 rounded-lg transition-colors text-slate-400 hover:text-white">iPad / iOS</button>
+                <button type="button" id="tab-guide-desktop" onclick="app.switchPwaGuideTab('desktop')" class="py-1.5 px-1 rounded-lg transition-colors text-slate-400 hover:text-white">Desktop</button>
+            </div>
+
+            <!-- GUIDE 1: Samsung Internet -->
+            <div id="guide-panel-samsung" class="hidden text-left bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 space-y-3 text-xs">
+                <div class="flex items-center gap-2 font-bold text-cyber-cyan">
+                    <i class="fa-solid fa-mobile-screen-button text-base"></i>
+                    <span>Samsung Internet (Galaxy Tablet & Phone)</span>
+                </div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                    Samsung Internet provides built-in PWA support with two quick ways to install:
                 </p>
-                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed text-[11px]">
-                    <li>Tap the <strong class="text-white"><i class="fa-solid fa-arrow-up-from-bracket text-cyber-cyan"></i> Share</strong> button in Safari's top toolbar.</li>
-                    <li>Scroll down and select <strong class="text-white"><i class="fa-solid fa-plus-square text-brand-400"></i> Add to Home Screen</strong>.</li>
-                    <li>Tap <strong class="text-white">Add</strong> in the top-right corner to finish.</li>
+                <div class="space-y-2 text-slate-300 text-[11px] leading-relaxed">
+                    <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
+                        <strong class="text-white block"><i class="fa-solid fa-circle-1 text-cyber-cyan mr-1"></i> Quick URL Bar Method:</strong>
+                        Look at the right side of the top address bar. If you see a <strong class="text-cyber-cyan"><i class="fa-solid fa-download"></i> Down-Arrow Install icon</strong>, tap it to install immediately.
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
+                        <strong class="text-white block"><i class="fa-solid fa-circle-2 text-brand-400 mr-1"></i> Browser Menu Method:</strong>
+                        1. Tap the <strong class="text-white"><i class="fa-solid fa-bars"></i> Menu (≡)</strong> icon at the bottom-right.<br>
+                        2. Tap <strong class="text-white"><i class="fa-solid fa-plus-circle text-cyber-cyan"></i> Add page to</strong> (or "Install web app").<br>
+                        3. Choose <strong class="text-white">Home screen</strong> or <strong class="text-white">App screen</strong>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- GUIDE 2: Android Chrome -->
+            <div id="guide-panel-chrome" class="hidden text-left bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 space-y-3 text-xs">
+                <div class="flex items-center gap-2 font-bold text-amber-400">
+                    <i class="fa-brands fa-chrome text-base"></i>
+                    <span>Android Chrome</span>
+                </div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                    Chrome allows installing AniTrack as a high-performance standalone Android application:
+                </p>
+                <ol class="list-decimal list-inside space-y-2 text-slate-300 text-[11px] leading-relaxed">
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Tap the <strong class="text-white"><i class="fa-solid fa-ellipsis-vertical text-amber-400"></i> Three Dots</strong> in the top-right corner of Chrome.
+                    </li>
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Select <strong class="text-white"><i class="fa-solid fa-download text-cyber-cyan"></i> Install app</strong> (or <strong class="text-white">Add to Home screen</strong>).
+                    </li>
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Tap <strong class="text-white">Install</strong> in the confirmation dialog.
+                    </li>
                 </ol>
             </div>
 
-            <div id="pwa-install-guide-generic" class="hidden text-left bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs text-slate-300">
-                <p class="font-bold text-cyber-cyan flex items-center gap-2">
-                    <i class="fa-solid fa-tablet-screen-button text-base"></i> Tablet / Browser Instructions:
+            <!-- GUIDE 3: iPad / iPhone Safari -->
+            <div id="guide-panel-ios" class="hidden text-left bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 space-y-3 text-xs">
+                <div class="flex items-center gap-2 font-bold text-purple-400">
+                    <i class="fa-brands fa-apple text-base"></i>
+                    <span>iPad & iPhone (Safari)</span>
+                </div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                    WebKit does not support automatic prompts; use Safari's native Add to Home Screen option:
                 </p>
-                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed text-[11px]">
-                    <li>Tap your browser menu (<strong class="text-white"><i class="fa-solid fa-ellipsis-vertical"></i></strong> or address bar icon).</li>
-                    <li>Choose <strong class="text-white">Install App</strong> or <strong class="text-white">Add to Home screen</strong>.</li>
-                    <li>Confirm to run as an ultra-fast standalone application.</li>
+                <ol class="list-decimal list-inside space-y-2 text-slate-300 text-[11px] leading-relaxed">
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Tap the <strong class="text-white"><i class="fa-solid fa-arrow-up-from-bracket text-cyber-cyan"></i> Share</strong> button in Safari's top (iPad) or bottom (iPhone) toolbar.
+                    </li>
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Scroll down the share sheet and tap <strong class="text-white"><i class="fa-solid fa-plus-square text-purple-400"></i> Add to Home Screen</strong>.
+                    </li>
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Tap <strong class="text-white">Add</strong> in the top-right corner to finish.
+                    </li>
                 </ol>
             </div>
 
-            <div class="flex items-center gap-2">
+            <!-- GUIDE 4: Desktop Chrome / Edge -->
+            <div id="guide-panel-desktop" class="hidden text-left bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 space-y-3 text-xs">
+                <div class="flex items-center gap-2 font-bold text-cyber-cyan">
+                    <i class="fa-solid fa-desktop text-base"></i>
+                    <span>Desktop (Chrome, Edge, Brave, Opera)</span>
+                </div>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                    Install AniTrack directly to your Windows, macOS, or ChromeOS taskbar:
+                </p>
+                <ol class="list-decimal list-inside space-y-2 text-slate-300 text-[11px] leading-relaxed">
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Look on the right side of the address bar for the <strong class="text-white"><i class="fa-solid fa-computer"></i> Install App (⊕)</strong> icon and click it.
+                    </li>
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Or click the three dots menu (<strong class="text-white">⋮</strong>) -> select <strong class="text-white">Install AniTrack</strong>.
+                    </li>
+                    <li class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/60">
+                        Confirm <strong class="text-white">Install</strong> to open in a dedicated app window.
+                    </li>
+                </ol>
+            </div>
+
+            <!-- PWA Installation Requirements Checklist -->
+            <div class="text-left bg-slate-950/90 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> PWA Verification Status
+                    </span>
+                    <button type="button" onclick="app.checkPwaStatusDiagnostics()" class="text-[10px] text-cyber-cyan hover:underline">Refresh Status</button>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-relaxed">
+                    The browser controls the installation event. JavaScript cannot force an install popup when the app or environment doesn't meet requirements:
+                </p>
+                <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                    <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800/60 flex items-center justify-between">
+                        <span class="text-slate-400">HTTPS Security:</span>
+                        <span id="pwa-diag-https" class="font-bold text-slate-300">Checking...</span>
+                    </div>
+                    <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800/60 flex items-center justify-between">
+                        <span class="text-slate-400">Manifest & Icons:</span>
+                        <span id="pwa-diag-manifest" class="font-bold text-slate-300">Checking...</span>
+                    </div>
+                    <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800/60 flex items-center justify-between">
+                        <span class="text-slate-400">Service Worker:</span>
+                        <span id="pwa-diag-sw" class="font-bold text-slate-300">Checking...</span>
+                    </div>
+                    <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800/60 flex items-center justify-between">
+                        <span class="text-slate-400">Install Event:</span>
+                        <span id="pwa-diag-prompt" class="font-bold text-slate-300">Checking...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
                 <button onclick="app.launchDirectTab()" class="w-1/2 py-2.5 rounded-xl text-xs font-semibold text-cyber-cyan bg-slate-950 hover:bg-slate-900 border border-cyber-cyan/30 transition-all flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-external-link text-xs"></i> New Tab
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> Open in New Tab
                 </button>
-                <button onclick="app.closeModal('pwa-install-modal')" class="w-1/2 py-2.5 rounded-xl text-xs font-semibold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Got It</button>
+                <button onclick="app.closeModal('pwa-install-modal')" class="w-1/2 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-cyber-cyan hover:brightness-110 shadow-lg shadow-cyan-500/20 transition-all">Close</button>
             </div>
         </div>
     </div>
